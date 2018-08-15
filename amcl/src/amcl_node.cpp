@@ -365,7 +365,7 @@ AmclNode::AmclNode() :
   private_nh_.param("laser_model_type", tmp_model_type, std::string("likelihood_field"));
   if(tmp_model_type == "beam")
     laser_model_type_ = LASER_MODEL_BEAM;
-  else if(tmp_model_type == "likelihood_field")
+  else if(tmp_model_type == "likelihood_field")//默认是这个，释然域
     laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD;
   else if(tmp_model_type == "likelihood_field_prob"){
     laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD_PROB;
@@ -378,7 +378,7 @@ AmclNode::AmclNode() :
   }
 
   private_nh_.param("odom_model_type", tmp_model_type, std::string("diff"));
-  if(tmp_model_type == "diff")
+  if(tmp_model_type == "diff")//默认是这个，差速运动模型
     odom_model_type_ = ODOM_MODEL_DIFF;
   else if(tmp_model_type == "omni")
     odom_model_type_ = ODOM_MODEL_OMNI;
@@ -413,7 +413,7 @@ AmclNode::AmclNode() :
     bag_scan_period_.fromSec(bag_scan_period);
   }
 
-  updatePoseFromServer();
+  updatePoseFromServer();//从参数服务器来更新机器人位姿
 
   cloud_pub_interval.fromSec(1.0);
   tfb_ = new tf::TransformBroadcaster();
@@ -432,7 +432,7 @@ AmclNode::AmclNode() :
           new tf::MessageFilter<sensor_msgs::LaserScan>(*laser_scan_sub_, 
                                                         *tf_, 
                                                         odom_frame_id_, 
-                                                        100);
+  //订阅雷达数据                                                      100);
   laser_scan_filter_->registerCallback(boost::bind(&AmclNode::laserReceived,
                                                    this, _1));
   initial_pose_sub_ = nh_.subscribe("initialpose", 2, &AmclNode::initialPoseReceived, this);
@@ -806,9 +806,9 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   freeMapDependentMemory();
   // Clear queued laser objects because they hold pointers to the existing
   // map, #5202.
-  lasers_.clear();
-  lasers_update_.clear();
-  frame_to_laser_.clear();
+  lasers_.clear();//清零雷达
+  lasers_update_.clear();//清零雷达更新
+  frame_to_laser_.clear();//清零雷达索引
 
   map_ = convertMap(msg);
 
@@ -903,21 +903,22 @@ AmclNode::convertMap( const nav_msgs::OccupancyGrid& map_msg )
   map_t* map = map_alloc();
   ROS_ASSERT(map);
 
-  map->size_x = map_msg.info.width;
-  map->size_y = map_msg.info.height;
-  map->scale = map_msg.info.resolution;
+  map->size_x = map_msg.info.width;    //地图的宽度
+  map->size_y = map_msg.info.height;   //地图的高度
+  map->scale = map_msg.info.resolution;//地图的分辨率
+  //地图中心位置
   map->origin_x = map_msg.info.origin.position.x + (map->size_x / 2) * map->scale;
   map->origin_y = map_msg.info.origin.position.y + (map->size_y / 2) * map->scale;
   // Convert to player format
-  map->cells = (map_cell_t*)malloc(sizeof(map_cell_t)*map->size_x*map->size_y);
+  map->cells = (map_cell_t*)malloc(sizeof(map_cell_t)*map->size_x*map->size_y);//分配栅格
   ROS_ASSERT(map->cells);
   for(int i=0;i<map->size_x * map->size_y;i++)
   {
-    if(map_msg.data[i] == 0)
+    if(map_msg.data[i] == 0)//空闲
       map->cells[i].occ_state = -1;
-    else if(map_msg.data[i] == 100)
+    else if(map_msg.data[i] == 100)//占用
       map->cells[i].occ_state = +1;
-    else
+    else //未知
       map->cells[i].occ_state = 0;
   }
 
@@ -945,7 +946,7 @@ AmclNode::getOdomPose(tf::Stamped<tf::Pose>& odom_pose,
                                            tf::Vector3(0,0,0)), t, f);
   try
   {
-    this->tf_->transformPose(odom_frame_id_, ident, odom_pose);
+    this->tf_->transformPose(odom_frame_id_, ident, odom_pose);//机器人相对于里程计坐标系的关系
   }
   catch(tf::TransformException e)
   {
@@ -1046,12 +1047,13 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   int laser_index = -1;
 
   // Do we have the base->base_laser Tx yet?
+  //如果是新的雷达(机器人上可能安装多个雷达)
   if(frame_to_laser_.find(laser_scan->header.frame_id) == frame_to_laser_.end())
   {
     ROS_DEBUG("Setting up laser %d (frame_id=%s)\n", (int)frame_to_laser_.size(), laser_scan->header.frame_id.c_str());
-    lasers_.push_back(new AMCLLaser(*laser_));
-    lasers_update_.push_back(true);
-    laser_index = frame_to_laser_.size();
+    lasers_.push_back(new AMCLLaser(*laser_));//添加一个新的雷达
+    lasers_update_.push_back(true);//雷达数据更新
+    laser_index = frame_to_laser_.size();//目前已经存储的雷达的个数
 
     tf::Stamped<tf::Pose> ident (tf::Transform(tf::createIdentityQuaternion(),
                                              tf::Vector3(0,0,0)),
@@ -1075,19 +1077,21 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     laser_pose_v.v[1] = laser_pose.getOrigin().y();
     // laser mounting angle gets computed later -> set to 0 here!
     laser_pose_v.v[2] = 0;
-    lasers_[laser_index]->SetLaserPose(laser_pose_v);
+    lasers_[laser_index]->SetLaserPose(laser_pose_v);//设置雷达的位姿
     ROS_DEBUG("Received laser's pose wrt robot: %.3f %.3f %.3f",
               laser_pose_v.v[0],
               laser_pose_v.v[1],
               laser_pose_v.v[2]);
-
+    //雷达的坐标系名称对应的索引
     frame_to_laser_[laser_scan->header.frame_id] = laser_index;
   } else {
     // we have the laser pose, retrieve laser index
+    //之前已经存储过本雷达的FRAME ID。这里直接得到该雷达的索引号
     laser_index = frame_to_laser_[laser_scan->header.frame_id];
   }
 
   // Where was the robot when this scan was taken?
+  //通过里程计得到当前机器人的位姿
   pf_vector_t pose;
   if(!getOdomPose(latest_odom_pose_, pose.v[0], pose.v[1], pose.v[2],
                   laser_scan->header.stamp, base_frame_id_))
@@ -1121,10 +1125,10 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   }
 
   bool force_publication = false;
-  if(!pf_init_)
+  if(!pf_init_)//第一次得到扫描数据的时候，进这里。先进行初始化
   {
     // Pose at last filter update
-    pf_odom_pose_ = pose;
+    pf_odom_pose_ = pose;//粒子滤波的初始位姿
 
     // Filter is now initialized
     pf_init_ = true;
