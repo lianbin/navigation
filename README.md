@@ -9,6 +9,7 @@ to a mobile base.
 
 Related stacks:
 
+
  * http://github.com/ros-planning/navigation_tutorials
  * http://github.com/ros-planning/navigation_experimental
 
