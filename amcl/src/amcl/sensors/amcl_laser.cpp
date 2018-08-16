@@ -45,8 +45,8 @@ AMCLLaser::AMCLLaser(size_t max_beams, map_t* map) : AMCLSensor(),
 {
   this->time = 0.0;
 
-  this->max_beams = max_beams;
-  this->map = map;
+  this->max_beams = max_beams;//每次更新的时候，使用的光束个数
+  this->map = map;  //地图
 
   return;
 }

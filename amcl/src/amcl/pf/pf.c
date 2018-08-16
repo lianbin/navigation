@@ -55,10 +55,10 @@ pf_t *pf_alloc(int min_samples, int max_samples,
   
   srand48(time(NULL));
 
-  pf = calloc(1, sizeof(pf_t));
+  pf = calloc(1, sizeof(pf_t));       //粒子滤波结构
 
-  pf->random_pose_fn = random_pose_fn;
-  pf->random_pose_data = random_pose_data;
+  pf->random_pose_fn = random_pose_fn;//随机抽样粒子函数
+  pf->random_pose_data = random_pose_data;//随机抽样数据源(地图)
 
   pf->min_samples = min_samples;
   pf->max_samples = max_samples;
@@ -73,20 +73,22 @@ pf_t *pf_alloc(int min_samples, int max_samples,
   pf->dist_threshold = 0.5; 
   
   pf->current_set = 0;
-  for (j = 0; j < 2; j++)
+  for (j = 0; j < 2; j++)//两个粒子群
   {
     set = pf->sets + j;
-      
+
+	//粒子数
     set->sample_count = max_samples;
     set->samples = calloc(max_samples, sizeof(pf_sample_t));
 
+    //初始化粒子
     for (i = 0; i < set->sample_count; i++)
     {
       sample = set->samples + i;
       sample->pose.v[0] = 0.0;
       sample->pose.v[1] = 0.0;
       sample->pose.v[2] = 0.0;
-      sample->weight = 1.0 / max_samples;
+      sample->weight = 1.0 / max_samples;//默认粒子的权重相等
     }
 
     // HACK: is 3 times max_samples enough?
@@ -518,7 +520,7 @@ void pf_cluster_stats(pf_t *pf, pf_sample_set_t *set)
   // Compute cluster stats
   for (i = 0; i < set->sample_count; i++)
   {
-    sample = set->samples + i;
+    sample = set->samples + i;//一个粒子
 
     //printf("%d %f %f %f\n", i, sample->pose.v[0], sample->pose.v[1], sample->pose.v[2]);
 

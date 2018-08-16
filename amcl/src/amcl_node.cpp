@@ -806,9 +806,9 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   freeMapDependentMemory();
   // Clear queued laser objects because they hold pointers to the existing
   // map, #5202.
-  lasers_.clear();//清零雷达
-  lasers_update_.clear();//清零雷达更新
-  frame_to_laser_.clear();//清零雷达索引
+  lasers_.clear();         //清零雷达
+  lasers_update_.clear();  //清零雷达更新
+  frame_to_laser_.clear(); //清零雷达索引
 
   map_ = convertMap(msg);
 
@@ -817,7 +817,9 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   free_space_indices.resize(0);
   for(int i = 0; i < map_->size_x; i++)
     for(int j = 0; j < map_->size_y; j++)
+		//没有被占用
       if(map_->cells[MAP_INDEX(map_,i,j)].occ_state == -1)
+	  	//地图中空闲的栅格坐标点
         free_space_indices.push_back(std::make_pair(i,j));
 #endif
   // Create the particle filter
@@ -862,7 +864,7 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
 					beam_skip_threshold_, beam_skip_error_threshold_);
     ROS_INFO("Done initializing likelihood field model.");
   }
-  else
+  else//走这里的释然域模型
   {
     ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
     laser_->SetModelLikelihoodField(z_hit_, z_rand_, sigma_hit_,
